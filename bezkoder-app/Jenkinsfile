@@ -1,0 +1,24 @@
+pipeline {
+    agent any
+    stages {
+        stage ('Deploy to dev') {
+            steps {
+                nodejs(nodeJSInstallationName: 'nodejs16.16.0') {
+                    sh 'npm -v'  // substitute with your code
+                    sh 'node -v'
+                    checkout([$class: 'GitSCM', branches: [[name: 'refs/remotes/origin/vayd']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/kkharal/nodejs-app-testing.git']]])  
+                    sh '''
+                       cd bezkoder-app
+                       npm install
+                       echo "Copying the deployment files to the program folder"
+                       scp -r -o StrictHostKeyChecking=no bezkoder-app/ ubuntu@10.25.128.18:~/
+                       ssh -o StrictHostKeyChecking=no ubuntu@10.25.128.18 chmod +x ~/bezkoder-app/script.sh 
+                       ssh -o StrictHostKeyChecking=no ubuntu@10.25.128.18 sudo mv ~/bezkoder-app/nodestart.service /lib/systemd/system/nodestart.service
+                       echo "Starting the service"
+                       ssh -o StrictHostKeyChecking=no ubuntu@10.25.128.18 sudo systemctl start nodestart.service
+                    '''
+                }
+            }
+        }
+    }
+}
